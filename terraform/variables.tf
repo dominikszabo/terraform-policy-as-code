@@ -1,11 +1,11 @@
 # terraform/variables.tf
 
 variable "bucket_name" {
-  description = "tf_S3_bucket"
+  description = "The name for the primary S3 bucket."
   type        = string
 }
 
 variable "bucket_name2" {
-  description = "Second S3 bucket name"
+  description = "The name for the secondary S3 bucket."
   type        = string
 }
