@@ -22,6 +22,7 @@ resource "aws_s3_bucket" "example" {
   tags = {
     Name        = "ExampleBucket"
     Environment = "Dev"
+    Exposure = "private"
   }
 }
 
@@ -34,4 +35,29 @@ resource "aws_s3_bucket_acl" "example" {
 # Output the bucket name
 output "bucket_name" {
   value = aws_s3_bucket.example.id
+}
+
+# ------
+
+
+# Resource: S3 Bucket
+resource "aws_s3_bucket" "example2" {
+  bucket = var.bucket_name2
+
+  tags = {
+    Name        = "ExampleBucket"
+    Environment = "Dev"
+    Exposure = "public"
+  }
+}
+
+# Extra section for new ACL format
+resource "aws_s3_bucket_acl" "example2" {
+  bucket = aws_s3_bucket.example2.id
+  acl    = "public"
+}
+
+# Output the bucket name
+output "bucket_name" {
+  value = aws_s3_bucket.example2.id
 }
