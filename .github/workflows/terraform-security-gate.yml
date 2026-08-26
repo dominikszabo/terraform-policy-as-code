@@ -59,8 +59,8 @@ jobs:
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: tfsec-results.sarif
-
+          sarif_file: tfsec-results.sarif          # Ensure file exists before upload
+          if: ${{ always() && hashFiles('tfsec-results.sarif') != '' }}
   # Stage 3: Checkov - Deep security + compliance scan (source level)
   checkov-source-scan:
     runs-on: ubuntu-latest
@@ -89,10 +89,10 @@ jobs:
             --download-external-modules true \
             --branch ${{ github.head_ref || 'main' }} \
             --output cli,sarif \
-            --output-file-list stdout,./checkov-source.sarif || true
+            --output-file stdout,./checkov-source.sarif
 
       - name: Upload SARIF to GitHub
-        if: always()
+        if: ${{ always() && hashFiles('checkov-source.sarif') != '' }}
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: checkov-source.sarif
@@ -131,7 +131,13 @@ jobs:
             --framework terraform_plan \
             --compact \
             --output cli,sarif \
-            --output-file-list stdout,checkov-plan.sarif
+            --output-file stdout,checkov-plan.sarif
+
+      - name: Upload Checkov Plan SARIF
+        if: ${{ always() && hashFiles('checkov-plan.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov-plan.sarif
 
       - name: OPA/Conftest Custom Policy Check
         run: |
