@@ -86,8 +86,8 @@ jobs:
             --compact \
             --download-external-modules true \
             --branch ${{ github.head_ref || 'main' }} \
-            --output cli,sarif \
-            --output-file stdout,./checkov-source.sarif
+            --output sarif \
+            --output-file ./checkov-source.sarif
 
       - name: Upload SARIF to GitHub
         if: ${{ always() && hashFiles('checkov-source.sarif') != '' }}
