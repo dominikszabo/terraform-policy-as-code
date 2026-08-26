@@ -1,0 +1,152 @@
+# .github/workflows/terraform-security-gate.yml
+name: Terraform Security Gate
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '*.tf'
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - '*.tf'
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  # Stage 1: Format + Validation (fastest checks first)
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.x'
+
+      - name: Format Check
+        run: terraform -chdir=terraform/ fmt -check -diff
+
+      - name: Validate Config
+        run: |
+          terraform -chdir=terraform/ init -backend=false
+          terraform -chdir=terraform/ validate
+
+  # Stage 2: tfsec - Fast source-level security scan
+  tfsec-scan:
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: tfsec/tfsec-action@v0.9.1
+        with:
+          soft_fail: false            # Hard-block on any finding
+          format: sarif
+          output_file: tfsec-results.sarif
+          include_terraform_modules: true
+          minimum_severity: high       # Only HIGH in CI; MEDIUM for local dev
+
+      - name: Upload SARIF to GitHub
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: tfsec-results.sarif
+
+  # Stage 3: Checkov - Deep security + compliance scan (source level)
+  checkov-source-scan:
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.x'
+
+      - name: Install Checkov
+        run: pip3 install checkov==3.2.*
+
+      - name: Init modules for accurate scanning
+        run: terraform -chdir=terraform/ init -backend=false
+
+      - name: Run Checkov on source (diff-scan against branch)
+        run: |
+          checkov -d terraform/ \
+            --framework terraform \
+            --compact \
+            --download-external-modules true \
+            --branch ${{ github.head_ref || 'main' }} \
+            --output cli,sarif \
+            --output-file-list stdout,checkov-source.sarif
+
+      - name: Upload SARIF to GitHub
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov-source.sarif
+
+  # Stage 4: Checkov + Conftest on PLAN output (most accurate)
+  plan-level-security:
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.x'
+
+      - name: Install Checkov and Conftest
+        run: |
+          pip3 install checkov==3.2.*
+          curl -sSfL https://raw.githubusercontent.com/open-policy-agent/conftest/master/scripts/install.sh \
+            | sh -s -- -b /usr/local/bin
+
+      - name: Terraform Init
+        run: terraform -chdir=terraform/ init -backend=false
+
+      - name: Terraform Plan
+        run: terraform -chdir=terraform/ plan -out=tfplan
+
+      - name: Checkov Plan Scan (most accurate)
+        run: |
+          checkov -f tfplan.json \
+            --framework terraform_plan \
+            --compact \
+            --output cli,sarif \
+            --output-file-list stdout,checkov-plan.sarif
+
+      - name: OPA/Conftest Custom Policy Check
+        run: |
+          conftest test tfplan.json \
+            --policy policies/ \
+            --all-namespaces
+
+  # Stage 5: PR comment with summary
+  pr-comment:
+    runs-on: ubuntu-latest
+    needs: [tfsec-scan, checkov-source-scan, plan-level-security]
+    if: always() && github.event_name == 'pull_request'
+    steps:
+      - name: Post Check Results Summary
+        uses: actions/github-script@v7   # placeholder for custom summary action
+        with:
+          script: |
+            // Collect results from previous jobs and post a PR comment
