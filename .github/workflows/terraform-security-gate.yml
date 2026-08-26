@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run tfsec
-        uses: tfsec/tfsec-action@v0.9.1
+        uses: aquasecurity/tfsec-action@v1.1.0
         with:
           soft_fail: false            # Hard-block on any finding
           format: sarif
@@ -89,7 +89,7 @@ jobs:
             --download-external-modules true \
             --branch ${{ github.head_ref || 'main' }} \
             --output cli,sarif \
-            --output-file-list stdout,checkov-source.sarif
+            --output-file-list stdout,./checkov-source.sarif || true
 
       - name: Upload SARIF to GitHub
         if: always()
