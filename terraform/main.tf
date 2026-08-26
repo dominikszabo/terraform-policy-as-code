@@ -58,6 +58,6 @@ resource "aws_s3_bucket_acl" "example2" {
 }
 
 # Output the bucket name
-output "bucket_name" {
+output "bucket_name2" {
   value = aws_s3_bucket.example2.id
 }
