@@ -22,7 +22,7 @@ resource "aws_s3_bucket" "example" {
   tags = {
     Name        = "ExampleBucket"
     Environment = "Dev"
-    Exposure = "private"
+    Exposure    = "private"
   }
 }
 
@@ -47,7 +47,7 @@ resource "aws_s3_bucket" "example2" {
   tags = {
     Name        = "ExampleBucket"
     Environment = "Dev"
-    Exposure = "public"
+    Exposure    = "public"
   }
 }
 
