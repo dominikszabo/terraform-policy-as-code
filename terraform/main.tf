@@ -54,7 +54,7 @@ resource "aws_s3_bucket" "example2" {
 # Extra section for new ACL format
 resource "aws_s3_bucket_acl" "example2" {
   bucket = aws_s3_bucket.example2.id
-  acl    = "public"
+  acl    = "private"
 }
 
 # Output the bucket name
