@@ -48,7 +48,7 @@ resource "aws_s3_bucket_acl" "example2" {
   bucket = aws_s3_bucket.example2.id
   acl    = "private"
 }
-# ---
+
 # Output the bucket name
 output "bucket_name2" {
   value = aws_s3_bucket.example2.id
