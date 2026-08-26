@@ -32,14 +32,6 @@ resource "aws_s3_bucket_acl" "example" {
   acl    = "private"
 }
 
-# Output the bucket name
-output "bucket_name" {
-  value = aws_s3_bucket.example.id
-}
-
-# ------
-
-
 # Resource: S3 Bucket
 resource "aws_s3_bucket" "example2" {
   bucket = var.bucket_name2
@@ -57,7 +49,14 @@ resource "aws_s3_bucket_acl" "example2" {
   acl    = "private"
 }
 
+# ------
+
 # Output the bucket name
 output "bucket_name2" {
   value = aws_s3_bucket.example2.id
+}
+
+# Output the bucket name
+output "bucket_name" {
+  value = aws_s3_bucket.example.id
 }
