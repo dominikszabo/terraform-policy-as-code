@@ -3,14 +3,8 @@ name: Terraform Security Gate
 
 on:
   pull_request:
-    paths:
-      - 'terraform/**'
-      - '*.tf'
   push:
     branches: [main]
-    paths:
-      - 'terraform/**'
-      - '*.tf'
 
 permissions:
   contents: read
